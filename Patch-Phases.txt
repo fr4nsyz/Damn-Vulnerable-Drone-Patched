@@ -1,0 +1,29 @@
+**Netsec Hardening Plan (4 layers)**
+
+**Scope:** Wi-Fi → MAVLink signing + ACLs → RTSP/TLS → SROS2 (stretch). Branch-based, one commit/phase, keys via env only.
+
+**Phase 1 – Wi-Fi**  
+- Files: `start.sh`, hostapd/wpa_supplicant configs, entrypoints.  
+- Drop WEP; enforce WPA3-SAE + PMF + CCMP-only; strong PSK from `DVD_WIFI_PSK`.  
+- Verify: `verify/wifi/verify-wifi.sh` (SAE beacon, uncrackable handshake, PMF blocks deauth).
+
+**Phase 2 – MAVLink signing + ACLs**  
+- Params: enforce sysid, failsafe, fence, full arming checks.  
+- 32-byte key from `DVD_MAVLINK_SIGNING_KEY`; enable signing on ArduPilot + all pymavlink clients (mavros/QGC risk noted).  
+- nftables ACLs restrict MAVLink ports to authorized peers.  
+- Verify: `verify/mavlink/verify-mavlink.py` (unsigned/corrupt rejected; signed works; firewall drops unauthorized).
+
+**Phase 3 – RTSP/TLS camera**  
+- Token-auth or RTSP-over-TLS on GStreamer; `@login_required` on MJPEG.  
+- Wi-Fi already encrypts transit.  
+- Verify: `verify/camera/verify-camera.sh` (no-token rejected; token plays; no plaintext).
+
+**Phase 4 – SROS2 (stretch)**  
+- Per-node certs + policies; CycloneDDS security config.  
+- Foxy/Cyclone 0.7 risk → fallback to localhost if needed.  
+- Verify: `verify/sros2/verify-sros2.sh` (auth fails, RTPS encrypted).
+
+**Deliverable:** `hardening/README.md` + `verify/{wifi,mavlink,camera,sros2}/`  
+**Effort:** P1 ~0.5–1d | P2 ~2–3d | P3 ~0.5d | P4 ~2–3d (stretch)  
+
+Pattern: attack → defense → automated proof per layer.
